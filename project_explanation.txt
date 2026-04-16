@@ -1,0 +1,48 @@
+YouTube Video Transcript Summarizer with GenAI
+==============================================
+Project Explanation - Step-by-Step Guide
+
+This document explains the inner workings of the YouTube Video Transcript Summarizer application. You can use this guide to easily explain the architecture and data flow of your project to others.
+
+---
+
+### Step 1: Environment Setup and UI Initialization
+- The application is built using **Streamlit**, a Python library that allows us to create interactive web applications quickly.
+- When `app.py` runs, the first thing it does is load environment variables (like the `GOOGLE_API_KEY`) from the hidden `.env` file securely using the `load_dotenv()` library.
+- Then, the Streamlit UI is constructed. It setups the dark theme, removes top padding, creates the main header ("YouTube Transcript Summarizer with GenAI"), and renders a sidebar on the left containing the YouTube logo and the user input fields.
+
+### Step 2: Processing the YouTube Link
+- In the sidebar, the user pastes a target YouTube video link. 
+- The app uses Python string manipulation (splitting by `v=` or `youtu.be/`) to extract the unique **Video ID**. 
+- *Why is the Video ID important?* Because all backend YouTube APIs require just this unique ID to look up video data, not the full URL.
+
+### Step 3: Discovering Available Transcript Languages
+- Once the app has the Video ID, it immediately calls the `extract_languages()` function.
+- This function uses the `youtube-transcript-api` library to securely ask YouTube's servers: *"What subtitle languages are available for this specific video?"*
+- It retrieves the language codes (like 'en', 'es') and maps them to human-readable names (like 'English', 'Spanish') using the `langcodes` library.
+- It then populates a dropdown menu in the sidebar so the user can choose which transcript language they want to summarize.
+- *Error Handling:* If a video has disabled subtitles, is a live stream, or is age-restricted, this step catches the error gracefully and tells the user to try a different video instead of crashing.
+
+### Step 4: Extracting the Transcript
+- When the user selects a language and clicks **"Submit"**, the app displays the video's thumbnail on the main page to confirm which video is being processed.
+- Behind the scenes, the `extract_transcript()` function is triggered.
+- It contacts YouTube again and downloads the exact timestamps and text snippets of the selected subtitle track.
+- It extracts just the text from the JSON response and stitches it all together into one massive continuous string of text (the complete video script).
+
+### Step 5: Summarization using Google Gemini AI
+- Now that the app has the full transcript text, it calls the `generate_summary()` function.
+- We configure the `google.generativeai` library using our stored API key and tell it to use the **`gemini-2.5-flash`** model (Google's highly efficient, modern LLM).
+- We attach the massive transcript text to a highly specific **System Prompt**. The prompt instructs the AI:
+  *"You are a YouTube video summarizer. Take the transcript text, summarize the entire video, provide important points with proper sub-headings concisely (within 500 words)."*
+- The Gemini model analyzes the massive block of text, understands the context, and generates a formatted, easy-to-read summary.
+
+### Step 6: Final Output
+- The Streamlit interface waits for the AI to finish "thinking" (displaying a spinner).
+- Once the text is returned by Gemini, the app renders the beautifully formatted markdown summary directly on the webpage for the user to read!
+
+---
+Overall Tech Stack:
+1. Frontend: Streamlit
+2. Transcript Extraction: youtube-transcript-api
+3. AI/Summarization: Google Generative AI (Gemini 2.5 Flash API)
+4. Language Parsing: langcodes
